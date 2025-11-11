@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "components/ai-elements/**",
+    "components/chat-interface.tsx",
+    "app/chat-examples/**",
   ]),
 ]);
 
