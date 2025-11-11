@@ -9,13 +9,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useClaimSummary } from "@/hooks/use-claim-summary";
 import { ClaimFeedbackForm } from "@/components/claim-feedback-form";
+import { useTariffInsight } from "@/hooks/use-tariff-insight";
+import type { HighRiskClaim } from "@/lib/services/claims";
 
 type ClaimDetailPanelProps = {
   claimId?: string;
+  claimContext?: HighRiskClaim;
 };
 
-export function ClaimDetailPanel({ claimId }: ClaimDetailPanelProps) {
+export function ClaimDetailPanel({
+  claimId,
+  claimContext,
+}: ClaimDetailPanelProps) {
   const { data, isLoading, isError, refetch } = useClaimSummary(claimId);
+  const {
+    data: tariffData,
+    isLoading: isTariffLoading,
+    isError: isTariffError,
+    refetch: refetchTariff,
+  } = useTariffInsight(
+    claimContext
+      ? {
+          facility_id: claimContext.facility_id ?? undefined,
+          province: claimContext.province_name ?? undefined,
+          severity: claimContext.severity_group ?? undefined,
+          service_type: claimContext.service_type ?? undefined,
+          dx_group: claimContext.dx_primary_group ?? undefined,
+          limit: 3,
+        }
+      : undefined
+  );
 
   if (!claimId) {
     return (
@@ -103,6 +126,69 @@ export function ClaimDetailPanel({ claimId }: ClaimDetailPanelProps) {
               Peer {data.peer.key} · P90 {formatCurrency(data.peer.p90)} · Z{" "}
               {formatNumber(data.peer.cost_zscore, 2)}
             </p>
+          </div>
+          <div className="rounded-lg border p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">Tariff Insight</p>
+              {claimContext && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => refetchTariff()}
+                >
+                  <IconRefresh className="size-4" />
+                </Button>
+              )}
+            </div>
+            {!claimContext && (
+              <p className="text-muted-foreground text-sm">
+                Tariff insight tidak tersedia (fasilitas tidak teridentifikasi).
+              </p>
+            )}
+            {claimContext && isTariffLoading && (
+              <div className="flex flex-col gap-2 pt-2">
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-12 w-full" />
+                ))}
+              </div>
+            )}
+            {claimContext && !isTariffLoading && isTariffError && (
+              <p className="text-destructive text-sm">
+                Gagal memuat insight tarif.
+              </p>
+            )}
+            {claimContext &&
+              !isTariffLoading &&
+              !isTariffError &&
+              (tariffData?.length ? (
+                <div className="space-y-2 pt-2">
+                  {tariffData.slice(0, 3).map((row) => (
+                    <div
+                      key={`${row.facility_id}-${row.dx_primary_group}`}
+                      className="rounded-md border p-4 text-xs"
+                    >
+                      <p className="font-medium">
+                        {row.dx_primary_group ?? "DX Group tidak tersedia"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        Gap total {formatCurrency(row.total_gap)} dari{" "}
+                        {row.claim_count} klaim
+                      </p>
+                      <div className="flex flex-wrap gap-2 text-muted-foreground">
+                        <span>Avg gap {formatCurrency(row.avg_gap)}</span>
+                        <span>
+                          Payment ratio{" "}
+                          {(row.avg_payment_ratio ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm pt-2">
+                  Tidak ada insight tarif untuk kombinasi filter ini.
+                </p>
+              ))}
           </div>
           <div className="rounded-lg border p-3 text-sm">
             <p className="font-medium">Flags Aktif</p>

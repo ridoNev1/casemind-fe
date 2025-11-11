@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useEffect, type CSSProperties } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { AuthGuard } from "@/components/auth-guard";
@@ -33,6 +34,14 @@ import type { HighRiskFilters } from "@/lib/services/claims";
 
 const ALL_VALUE = "ALL";
 
+const DEFAULT_FILTERS: HighRiskFilters = {
+  page: 1,
+  page_size: 20,
+  severity: "sedang",
+  service_type: "RITL",
+  refresh_cache: false,
+};
+
 const severityOptions = [
   { label: "Semua Severity", value: ALL_VALUE },
   { label: "Ringan", value: "ringan" },
@@ -64,18 +73,69 @@ const pageSizeOptions = [
   { label: "100", value: "100" },
 ];
 
-const INITIAL_FILTERS: HighRiskFilters = {
-  page: 1,
-  page_size: 20,
-  severity: "sedang",
-  service_type: "RITL",
-  refresh_cache: false,
-};
+const normalizeFilters = (value: HighRiskFilters) => ({
+  page: value.page ?? DEFAULT_FILTERS.page,
+  page_size: value.page_size ?? DEFAULT_FILTERS.page_size,
+  severity: value.severity ?? "",
+  service_type: value.service_type ?? "",
+  facility_class: value.facility_class ?? "",
+  province: value.province ?? "",
+  dx: value.dx ?? "",
+  min_risk_score: value.min_risk_score ?? "",
+  max_risk_score: value.max_risk_score ?? "",
+  min_ml_score: value.min_ml_score ?? "",
+  start_date: value.start_date ?? "",
+  end_date: value.end_date ?? "",
+  discharge_start: value.discharge_start ?? "",
+  discharge_end: value.discharge_end ?? "",
+  refresh_cache: value.refresh_cache ?? false,
+});
 
 export default function Dashboard() {
-  const [filters, setFilters] = useState<HighRiskFilters>(INITIAL_FILTERS);
-  const [selectedClaimId, setSelectedClaimId] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const initialFilters: HighRiskFilters = useMemo(
+    () => ({
+      page: Number(searchParams.get("page")) || DEFAULT_FILTERS.page,
+      page_size:
+        Number(searchParams.get("page_size")) || DEFAULT_FILTERS.page_size,
+      severity: searchParams.get("severity") || DEFAULT_FILTERS.severity,
+      service_type:
+        searchParams.get("service_type") || DEFAULT_FILTERS.service_type,
+      facility_class: searchParams.get("facility_class") || undefined,
+      start_date: searchParams.get("start_date") || undefined,
+      end_date: searchParams.get("end_date") || undefined,
+      discharge_start: searchParams.get("discharge_start") || undefined,
+      discharge_end: searchParams.get("discharge_end") || undefined,
+      min_risk_score: searchParams.get("min_risk_score")
+        ? Number(searchParams.get("min_risk_score"))
+        : undefined,
+      max_risk_score: searchParams.get("max_risk_score")
+        ? Number(searchParams.get("max_risk_score"))
+        : undefined,
+      min_ml_score: searchParams.get("min_ml_score")
+        ? Number(searchParams.get("min_ml_score"))
+        : undefined,
+      province: searchParams.get("province") || undefined,
+      dx: searchParams.get("dx") || undefined,
+      refresh_cache: searchParams.get("refresh_cache") === "true",
+    }),
+    [searchParams]
+  );
+
+  const [filters, setFilters] = useState<HighRiskFilters>(initialFilters);
+  const [selectedClaimId, setSelectedClaimId] = useState<string | undefined>(
+    searchParams.get("selected") || undefined
+  );
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const normalizedFilters = useMemo(() => normalizeFilters(filters), [filters]);
+  const defaultNormalized = useMemo(
+    () => normalizeFilters(DEFAULT_FILTERS),
+    []
+  );
 
   const queryFilters = useMemo(() => filters, [filters]);
 
@@ -83,40 +143,46 @@ export default function Dashboard() {
     useHighRiskClaims(queryFilters);
 
   const claims = useMemo(() => data?.data ?? [], [data]);
-  const activeClaimId = useMemo(() => {
-    if (
-      selectedClaimId &&
-      claims.some((claim) => claim.claim_id === selectedClaimId)
-    ) {
-      return selectedClaimId;
-    }
-    return undefined;
-  }, [claims, selectedClaimId]);
+  const activeClaim = useMemo(
+    () => claims.find((claim) => claim.claim_id === selectedClaimId),
+    [claims, selectedClaimId],
+  );
+  const activeClaimId = activeClaim?.claim_id;
   const sheetOpen = detailOpen && Boolean(activeClaimId);
 
-  const isDefaultFilters = useMemo(() => {
-    const normalize = (value: HighRiskFilters) => ({
-      page: value.page ?? 1,
-      page_size: value.page_size ?? 20,
-      severity: value.severity ?? "",
-      service_type: value.service_type ?? "",
-      facility_class: value.facility_class ?? "",
-      province: value.province ?? "",
-      dx: value.dx ?? "",
-      min_risk_score: value.min_risk_score ?? "",
-      max_risk_score: value.max_risk_score ?? "",
-      min_ml_score: value.min_ml_score ?? "",
-      start_date: value.start_date ?? "",
-      end_date: value.end_date ?? "",
-      discharge_start: value.discharge_start ?? "",
-      discharge_end: value.discharge_end ?? "",
-      refresh_cache: value.refresh_cache ?? false,
+  const isDefaultFilters = useMemo(
+    () =>
+      JSON.stringify(normalizedFilters) === JSON.stringify(defaultNormalized),
+    [normalizedFilters, defaultNormalized]
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    Object.entries(normalizedFilters).forEach(([key, value]) => {
+      const defaultValue = (defaultNormalized as Record<string, unknown>)[key];
+      const isEmpty =
+        value === "" ||
+        value === undefined ||
+        value === null ||
+        Number.isNaN(value as number);
+      if (isEmpty) {
+        return;
+      }
+      if (value === defaultValue) {
+        return;
+      }
+      params.set(key, String(value));
     });
-    return (
-      JSON.stringify(normalize(filters)) ===
-      JSON.stringify(normalize(INITIAL_FILTERS))
-    );
-  }, [filters]);
+
+    if (selectedClaimId) {
+      params.set("selected", selectedClaimId);
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [normalizedFilters, defaultNormalized, selectedClaimId, router, pathname]);
 
   const handleFilterChange = (key: keyof HighRiskFilters, value?: string) => {
     setFilters((prev) => ({
@@ -165,7 +231,8 @@ export default function Dashboard() {
   };
 
   const handleResetFilters = () => {
-    setFilters(INITIAL_FILTERS);
+    setFilters({ ...DEFAULT_FILTERS });
+    setSelectedClaimId(undefined);
   };
 
   return (
@@ -515,7 +582,7 @@ export default function Dashboard() {
             <SheetTitle>Detail Klaim & Chat</SheetTitle>
           </SheetHeader>
           <div className="grid gap-4 py-4 xl:grid-cols-[1.4fr_1fr]">
-            <ClaimDetailPanel claimId={activeClaimId} />
+            <ClaimDetailPanel claimId={activeClaimId} claimContext={activeClaim} />
             <ClaimChatPanel claimId={activeClaimId} />
           </div>
         </SheetContent>

@@ -10,6 +10,7 @@ export type HighRiskClaim = {
   province_name: string | null;
   dx_primary_code: string | null;
   dx_primary_label: string | null;
+  dx_primary_group?: string | null | undefined;
   amount_claimed: number;
   amount_paid: number;
   amount_gap: number;
@@ -135,7 +136,7 @@ export type ClaimFeedbackResponse = {
 };
 
 export async function fetchHighRiskClaims(
-  filters: HighRiskFilters,
+  filters: HighRiskFilters
 ): Promise<HighRiskResponse> {
   const params = {
     page: filters.page ?? 1,
@@ -150,39 +151,42 @@ export async function fetchHighRiskClaims(
   return data;
 }
 
-export async function fetchClaimSummary(claimId: string): Promise<ClaimSummary> {
+export async function fetchClaimSummary(
+  claimId: string
+): Promise<ClaimSummary> {
   const { data } = await apiClient.get<{ data: ClaimSummary }>(
-    `/claims/${claimId}/summary`,
+    `/claims/${claimId}/summary`
   );
   return data.data;
 }
 
-export async function fetchClaimChat(claimId: string): Promise<ClaimChatMessage[]> {
+export async function fetchClaimChat(
+  claimId: string
+): Promise<ClaimChatMessage[]> {
   const { data } = await apiClient.get<{ data: ClaimChatMessage[] }>(
-    `/claims/${claimId}/chat`,
+    `/claims/${claimId}/chat`
   );
   return data.data;
 }
 
 export async function postClaimChatMessage(
   claimId: string,
-  message: string,
+  message: string
 ): Promise<ClaimChatMessage> {
-  const { data } = await apiClient.post<{ data: { user_message: ClaimChatMessage; bot_message?: ClaimChatMessage } }>(
-    `/claims/${claimId}/chat`,
-    { message },
-  );
+  const { data } = await apiClient.post<{
+    data: { user_message: ClaimChatMessage; bot_message?: ClaimChatMessage };
+  }>(`/claims/${claimId}/chat`, { message });
   // Return bot message if exists, otherwise user message to simplify append logic
   return data.data.bot_message ?? data.data.user_message;
 }
 
 export async function submitClaimFeedback(
   claimId: string,
-  payload: ClaimFeedbackPayload,
+  payload: ClaimFeedbackPayload
 ) {
   const { data } = await apiClient.post<ClaimFeedbackResponse>(
     `/claims/${claimId}/feedback`,
-    payload,
+    payload
   );
   return data.data;
 }
