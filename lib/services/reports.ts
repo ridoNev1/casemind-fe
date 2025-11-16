@@ -25,6 +25,29 @@ export type TariffInsightParams = {
   limit?: number;
 };
 
+export type ReportLimitParams = {
+  limit?: number;
+};
+
+export type SeverityMismatchRow = {
+  claim_id: string;
+  dx_primary: string | null;
+  facility_class: string | null;
+  province: string | null;
+  los: number | null;
+  claimed: number | null;
+  peer_p90: number | null;
+  delta_pct: number | null;
+};
+
+export type DuplicateClaimRow = {
+  claim_id: string;
+  matched_claim_id: string;
+  dx_primary: string | null;
+  procedure_code: string | null;
+  episode_gap_days: number | null;
+};
+
 export async function fetchTariffInsight(
   params: TariffInsightParams,
 ): Promise<TariffInsightRow[]> {
@@ -33,6 +56,26 @@ export async function fetchTariffInsight(
     {
       params,
     },
+  );
+  return data.data;
+}
+
+export async function fetchSeverityMismatch(
+  params?: ReportLimitParams,
+): Promise<SeverityMismatchRow[]> {
+  const { data } = await apiClient.get<{ data: SeverityMismatchRow[] }>(
+    "/reports/severity-mismatch",
+    { params },
+  );
+  return data.data;
+}
+
+export async function fetchDuplicateClaims(
+  params?: ReportLimitParams,
+): Promise<DuplicateClaimRow[]> {
+  const { data } = await apiClient.get<{ data: DuplicateClaimRow[] }>(
+    "/reports/duplicates",
+    { params },
   );
   return data.data;
 }
