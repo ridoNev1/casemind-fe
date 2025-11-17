@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, type CSSProperties } from "react";
+import { Suspense, useMemo, useState, useEffect, type CSSProperties } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -91,7 +91,7 @@ const normalizeFilters = (value: HighRiskFilters) => ({
   refresh_cache: value.refresh_cache ?? false,
 });
 
-export default function Dashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -588,5 +588,19 @@ export default function Dashboard() {
         </SheetContent>
       </Sheet>
     </AuthGuard>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+          Memuat filter klaim...
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }
