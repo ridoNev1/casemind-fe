@@ -14,15 +14,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const hydrated = useAuthHydration();
   const token = useAuthStore((state) => state.token);
+  const shouldRedirect = hydrated && !token;
 
   useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    if (!token) {
+    if (shouldRedirect) {
       router.replace("/login");
     }
-  }, [token, hydrated, router]);
+  }, [shouldRedirect, router]);
 
   if (!hydrated) {
     return (
@@ -32,8 +30,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  if (!token) {
-    return null;
+  if (shouldRedirect) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2">
+        <p className="text-muted-foreground text-sm">
+          Mengalihkan ke halaman login...
+        </p>
+      </div>
+    );
   }
 
   return <>{children}</>;
