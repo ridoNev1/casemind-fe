@@ -91,7 +91,7 @@ const normalizeFilters = (value: HighRiskFilters) => ({
   refresh_cache: value.refresh_cache ?? false,
 });
 
-function DashboardContent() {
+function DashboardShell() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -236,26 +236,25 @@ function DashboardContent() {
   };
 
   return (
-    <AuthGuard>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                {/* <SectionCards />
-                <div className="px-4 lg:px-6">
-                  <ChartAreaInteractive />
-                </div> */}
-                <div className="flex flex-wrap items-center gap-4 px-4 lg:px-6">
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              {/* <SectionCards />
+              <div className="px-4 lg:px-6">
+                <ChartAreaInteractive />
+              </div> */}
+              <div className="flex flex-wrap items-center gap-4 px-4 lg:px-6">
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs uppercase text-muted-foreground">
                       Severity
@@ -574,33 +573,37 @@ function DashboardContent() {
               </div>
             </div>
           </div>
+          <Sheet open={sheetOpen} onOpenChange={setDetailOpen}>
+            <SheetContent side="right" className="overflow-y-auto p-4">
+              <SheetHeader>
+                <SheetTitle>Detail Klaim & Chat</SheetTitle>
+              </SheetHeader>
+              <div className="grid gap-4 py-4 xl:grid-cols-[1.4fr_1fr]">
+                <ClaimDetailPanel
+                  claimId={activeClaimId}
+                  claimContext={activeClaim}
+                />
+                <ClaimChatPanel claimId={activeClaimId} />
+              </div>
+            </SheetContent>
+          </Sheet>
         </SidebarInset>
       </SidebarProvider>
-      <Sheet open={sheetOpen} onOpenChange={setDetailOpen}>
-        <SheetContent side="right" className="overflow-y-auto p-4">
-          <SheetHeader>
-            <SheetTitle>Detail Klaim & Chat</SheetTitle>
-          </SheetHeader>
-          <div className="grid gap-4 py-4 xl:grid-cols-[1.4fr_1fr]">
-            <ClaimDetailPanel claimId={activeClaimId} claimContext={activeClaim} />
-            <ClaimChatPanel claimId={activeClaimId} />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </AuthGuard>
   );
 }
 
 export default function Dashboard() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-          Memuat filter klaim...
-        </div>
-      }
-    >
-      <DashboardContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+            Memuat filter klaim...
+          </div>
+        }
+      >
+        <DashboardShell />
+      </Suspense>
+    </AuthGuard>
   );
 }

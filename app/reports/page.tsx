@@ -32,7 +32,7 @@ const limitOptions = [
 
 const skeletonRows = Array.from({ length: 6 });
 
-export default function ReportsPage() {
+function ReportsShell() {
   const [severityLimit, setSeverityLimit] = useState("20");
   const [duplicateLimit, setDuplicateLimit] = useState("20");
 
@@ -61,15 +61,14 @@ export default function ReportsPage() {
   }, [duplicateQuery.data]);
 
   return (
-    <AuthGuard>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <SiteHeader
-            title="Reports & Analytics"
-            description="Pantau mismatch severity dan kandidat klaim duplikat secara realtime."
-          />
-          <div className="flex flex-1 flex-col gap-6 p-4 pb-10 md:p-6">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <SiteHeader
+          title="Reports & Analytics"
+          description="Pantau mismatch severity dan kandidat klaim duplikat secara realtime."
+        />
+        <div className="flex flex-1 flex-col gap-6 p-4 pb-10 md:p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -342,9 +341,16 @@ export default function ReportsPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <AuthGuard>
+      <ReportsShell />
     </AuthGuard>
   );
 }
